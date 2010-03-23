@@ -978,6 +978,14 @@ $g_status_legend_position = STATUS_LEGEND_POSITION_BOTTOM;
 $g_status_percentage_legend = OFF;
 
 /**
+ * Do not include status levels above this in the status percentage
+ * bar. Useful for hiding issues above resolved/closed to show more useful
+ * "working" percentages.
+ * @global int $g_status_percentage_legend_hide_level
+ */
+$g_status_percentage_legend_hide = CLOSED;
+
+/**
  * Position of the filter box, can be: POSITION_*
  * POSITION_TOP, POSITION_BOTTOM, or POSITION_NONE for none.
  * @global int $g_filter_position

@@ -1218,7 +1218,7 @@ function print_summary_menu( $p_page = '' ) {
  * @param string
  * @return null
  */
-function html_status_legend() {
+function html_status_legend( $p_use_filter = false ) {
 	echo '<br />';
 	echo '<table class="width100" cellspacing="1">';
 	echo '<tr>';
@@ -1285,7 +1285,7 @@ function html_status_legend() {
 	echo '</tr>';
 	echo '</table>';
 	if( ON == config_get( 'status_percentage_legend' ) ) {
-		html_status_percentage_legend();
+		html_status_percentage_legend($p_use_filter);
 	}
 }
 
@@ -1293,27 +1293,49 @@ function html_status_legend() {
  * Print the legend for the status percentage
  * @return null
  */
-function html_status_percentage_legend() {
+function html_status_percentage_legend( $p_use_filter = false ) {
 	$t_mantis_bug_table = db_get_table( 'bug' );
 	$t_project_id = helper_get_current_project();
 	$t_user_id = auth_get_current_user_id();
 
-	# checking if it's a per project statistic or all projects
-	$t_specific_where = helper_project_specific_where( $t_project_id, $t_user_id );
-
-	$query = "SELECT status, COUNT(*) AS number
-				FROM $t_mantis_bug_table
-				WHERE $t_specific_where
-				GROUP BY status";
-	$result = db_query_bound( $query );
-
 	$t_bug_count = 0;
 	$t_status_count_array = array();
 
-	while( $row = db_fetch_array( $result ) ) {
-		$t_status_count_array[$row['status']] = $row['number'];
-		$t_bug_count += $row['number'];
-	}
+	# Use current filter
+	if ( $p_use_filter ) {
+		$t_filter = current_user_get_bug_filter();
+		if ( !$t_filter ) $t_filter = filter_get_default();
+
+		# Get data
+		$t_page_num = 0;
+		$t_per_page = -1;
+		$t_page_count = 0;
+		$rows = filter_get_bug_rows($t_page_num, $t_per_page, $t_page_count, $t_bug_count);
+
+		# Process
+		foreach ( $rows as $row ) {
+			$t_status_count_array[$row->status]++;
+		}
+
+	# Default to project list
+	} else {
+		$t_hide_level = config_get('status_percentage_legend_hide');
+
+		# checking if it's a per project statistic or all projects
+		$t_specific_where = helper_project_specific_where( $t_project_id, $t_user_id );
+
+		$query = "SELECT status, COUNT(*) AS number
+					FROM $t_mantis_bug_table
+					WHERE $t_specific_where AND
+					status < $t_hide_level
+				  GROUP BY status";
+		$result = db_query_bound( $query );
+
+		while( $row = db_fetch_array( $result ) ) {
+			$t_status_count_array[$row['status']] = $row['number'];
+			$t_bug_count += $row['number'];
+    }
+  }
 
 	$t_enum_values = MantisEnum::getValues( config_get( 'status_enum_string' ) );
 	$enum_count = count( $t_enum_values );
